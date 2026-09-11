@@ -26,9 +26,9 @@ export default function TicketList() {
         setRows(data.rows);
         setTotal(data.total);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [page, search, status, priority, sortBy]);
 
   async function handleDelete(id) {
     await api(`/tickets/${id}`, { method: 'DELETE' });

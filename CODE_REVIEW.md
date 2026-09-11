@@ -150,7 +150,7 @@ This produces:
 
 **Severity:** Medium
 **File:** `client/src/features/tickets/TicketList.jsx`
-**Status:** Not selected for fix
+**Status:** Fixed
 
 ### What is wrong
 
@@ -176,7 +176,7 @@ Include the relevant filter values in the `useEffect` dependency array so that t
 
 **Severity:** Low
 **Files:** Client authentication/routing code
-**Status:** Planned for fix
+**Status:** Not Selected for fix
 
 ### What is wrong
 
@@ -202,7 +202,7 @@ The five findings selected for implementation are:
 2. Non-admin users can delete tickets — Fixed
 3. Requesters can claim tickets — Fixed
 4. Page 1 skips the first 20 tickets — Fixed
-5. Logged-in users can still access the login page — Pending
+5. Search and filters do not refresh the ticket list — Fixed
 
 The following findings are documented but will remain unchanged:
 
