@@ -70,8 +70,15 @@ export default function TicketList() {
       <table>
         <thead>
           <tr>
-            <th>#</th><th>Subject</th><th>Status</th><th>Priority</th>
-            <th>Assignee</th><th>Comments</th><th>Created</th><th />
+            <th>#</th>
+            <th>Subject</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>SLA</th>
+            <th>Assignee</th>
+            <th>Comments</th>
+            <th>Created</th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -81,6 +88,17 @@ export default function TicketList() {
               <td><Link to={`/tickets/${t.id}`}>{t.subject}</Link></td>
               <td>{t.status}</td>
               <td>{t.priority}</td>
+              <td>
+                {t.sla_breached ? (
+                  <span className="sla-badge sla-breached">
+                    Breached
+                  </span>
+                ) : (
+                  <span className="sla-badge sla-ok">
+                    Within SLA
+                  </span>
+                )}
+              </td>
               <td>{t.assignee_name || '—'}</td>
               <td>{t.comment_count}</td>
               <td>{new Date(t.created_at).toLocaleString()}</td>

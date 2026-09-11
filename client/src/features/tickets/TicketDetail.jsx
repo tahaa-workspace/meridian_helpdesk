@@ -51,6 +51,20 @@ export default function TicketDetail() {
         #{ticket.id} · {ticket.status} · {ticket.priority} ·
         requested by {ticket.requester_name} ({ticket.requester_email})
       </p>
+      <div className="sla-detail">
+        <span
+          className={`sla-badge ${ticket.sla_breached ? 'sla-breached' : 'sla-ok'
+            }`}
+        >
+          {ticket.sla_breached ? 'SLA Breached' : 'Within SLA'}
+        </span>
+
+        {ticket.sla_due_at && (
+          <span className="sla-due">
+            SLA deadline: {new Date(ticket.sla_due_at).toLocaleString()}
+          </span>
+        )}
+      </div>
       <p className="body">{ticket.body}</p>
 
       {!ticket.assignee_id && (user?.role == 'admin' || user?.role == 'agent') && <button onClick={claim}>Claim this ticket</button>}

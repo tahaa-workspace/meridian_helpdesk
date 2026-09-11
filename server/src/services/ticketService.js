@@ -68,38 +68,25 @@ export async function listTickets({
     params.push(priority);
   }
 
-  if (breached === true) {
-    where.push(`
-    t.status IN ('open', 'pending')
-    AND (
-      (t.priority = 'P1' AND t.created_at <= DATE_SUB(NOW(), INTERVAL ? HOUR))
-      OR
-      (t.priority = 'P2' AND t.created_at <= DATE_SUB(NOW(), INTERVAL ? HOUR))
-      OR
-      (t.priority = 'P3' AND t.created_at <= DATE_SUB(NOW(), INTERVAL ? HOUR))
-    )
-  `);
-
-    params.push(
-      config.slaTargets.P1,
-      config.slaTargets.P2,
-      config.slaTargets.P3
-    );
-  }
-
-  if (breached === false) {
-    where.push(`
+  if (breached !== undefined) {
+    const breachCondition = `
     (
-      t.status NOT IN ('open', 'pending')
-      OR (
-        (t.priority = 'P1' AND t.created_at > DATE_SUB(NOW(), INTERVAL ? HOUR))
+      t.status IN ('open', 'pending')
+      AND (
+        (t.priority = 'P1' AND TIMESTAMPADD(HOUR, ?, t.created_at) <= NOW())
         OR
-        (t.priority = 'P2' AND t.created_at > DATE_SUB(NOW(), INTERVAL ? HOUR))
+        (t.priority = 'P2' AND TIMESTAMPADD(HOUR, ?, t.created_at) <= NOW())
         OR
-        (t.priority = 'P3' AND t.created_at > DATE_SUB(NOW(), INTERVAL ? HOUR))
+        (t.priority = 'P3' AND TIMESTAMPADD(HOUR, ?, t.created_at) <= NOW())
       )
     )
-  `);
+  `;
+
+    if (breached === true) {
+      where.push(breachCondition);
+    } else {
+      where.push(`NOT ${breachCondition}`);
+    }
 
     params.push(
       config.slaTargets.P1,
