@@ -30,8 +30,9 @@ router.get('/', requireAuth, async (req, res, next) => {
 
 router.get('/:id', requireAuth, async (req, res, next) => {
   try {
-    const ticket = await getTicketById(Number(req.params.id));
-    if (!ticket) return res.status(404).json({ error: 'Not found' });
+    const ticket = await getTicketById(Number(req.params.id)); //Customers should not be able to see each others tickets
+    if (!ticket || ticket.org_id !== req.user.orgId)
+      return res.status(404).json({ error: 'Not found' });
 
     const comments = await listComments(ticket.id);
     res.json({ ticket, comments });
@@ -59,7 +60,7 @@ router.post('/', requireAuth, async (req, res, next) => {
   }
 });
 
-router.patch('/:id/assign', requireAuth, async (req, res, next) => {
+router.patch('/:id/assign', requireAuth, async (req, res, next) => { //only the admin and the agent should be able to claim the ticker, currently anyone is able to claim the ticket
   try {
     const result = await assignTicket(Number(req.params.id), req.user.id);
     if (!result) return res.status(404).json({ error: 'Not found' });
@@ -72,7 +73,7 @@ router.patch('/:id/assign', requireAuth, async (req, res, next) => {
   }
 });
 
-router.delete('/:id', requireAuth, async (req, res, next) => {
+router.delete('/:id', requireAuth, async (req, res, next) => { //no role check here. Only admins should be able to delete the ticket
   try {
     const ticket = await getTicketById(Number(req.params.id));
     if (!ticket) return res.status(404).json({ error: 'Not found' });
