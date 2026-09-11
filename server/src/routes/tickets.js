@@ -19,6 +19,12 @@ router.get('/', requireAuth, async (req, res, next) => {
       search: req.query.search || '',
       status: req.query.status,
       priority: req.query.priority,
+      breached:
+        req.query.breached === 'true'
+          ? true
+          : req.query.breached === 'false'
+            ? false
+            : undefined,
       sortBy: req.query.sortBy || 'created_at',
       order: req.query.order || 'desc',
     });
@@ -30,7 +36,7 @@ router.get('/', requireAuth, async (req, res, next) => {
 
 router.get('/:id', requireAuth, async (req, res, next) => {
   try {
-    const ticket = await getTicketById(Number(req.params.id)); //Customers should not be able to see each others tickets
+    const ticket = await getTicketById(Number(req.params.id));
     if (!ticket || ticket.org_id !== req.user.orgId)
       return res.status(404).json({ error: 'Not found' });
 
@@ -60,7 +66,7 @@ router.post('/', requireAuth, async (req, res, next) => {
   }
 });
 
-router.patch('/:id/assign', requireAuth, async (req, res, next) => {
+router.patch('/:id/assign', requireAuth, requireRole('agent', 'admin'), async (req, res, next) => {
   try {
     const result = await assignTicket(Number(req.params.id), req.user.id);
     if (!result) return res.status(404).json({ error: 'Not found' });

@@ -1,6 +1,40 @@
 import { query } from '../db/pool.js';
+import { config } from '../config.js';
 
 const PAGE_SIZE = 20;
+
+function addSlaFields(ticket) {
+  if (!ticket) return ticket;
+
+  const slaHours = config.slaTargets[ticket.priority];
+
+  if (!slaHours) {
+    return {
+      ...ticket,
+      sla_due_at: null,
+      sla_breached: false,
+    };
+  }
+
+  const createdAt = new Date(ticket.created_at);
+  const slaDueAt = new Date(
+    createdAt.getTime() + slaHours * 60 * 60 * 1000
+  );
+
+  const activeStatuses = ['open', 'pending'];
+
+  return {
+    ...ticket,
+    sla_due_at: slaDueAt,
+    sla_breached:
+      activeStatuses.includes(ticket.status) &&
+      new Date() >= slaDueAt,
+  };
+}
+
+function addSlaFieldsToTickets(tickets) {
+  return tickets.map(addSlaFields);
+}
 
 /**
  * Paginated ticket list for the current organisation.
@@ -8,7 +42,16 @@ const PAGE_SIZE = 20;
  * Supports free-text search on subject, filtering by status and priority,
  * and sorting by any column the UI exposes in its dropdown.
  */
-export async function listTickets({ orgId, page = 1, search = '', status, priority, sortBy = 'created_at', order = 'desc' }) {
+export async function listTickets({
+  orgId,
+  page = 1,
+  search = '',
+  status,
+  priority,
+  breached,
+  sortBy = 'created_at',
+  order = 'desc'
+}) {
   const where = ['t.org_id = ?'];
   const params = [orgId];
 
@@ -23,6 +66,46 @@ export async function listTickets({ orgId, page = 1, search = '', status, priori
   if (priority) {
     where.push('t.priority = ?');
     params.push(priority);
+  }
+
+  if (breached === true) {
+    where.push(`
+    t.status IN ('open', 'pending')
+    AND (
+      (t.priority = 'P1' AND t.created_at <= DATE_SUB(NOW(), INTERVAL ? HOUR))
+      OR
+      (t.priority = 'P2' AND t.created_at <= DATE_SUB(NOW(), INTERVAL ? HOUR))
+      OR
+      (t.priority = 'P3' AND t.created_at <= DATE_SUB(NOW(), INTERVAL ? HOUR))
+    )
+  `);
+
+    params.push(
+      config.slaTargets.P1,
+      config.slaTargets.P2,
+      config.slaTargets.P3
+    );
+  }
+
+  if (breached === false) {
+    where.push(`
+    (
+      t.status NOT IN ('open', 'pending')
+      OR (
+        (t.priority = 'P1' AND t.created_at > DATE_SUB(NOW(), INTERVAL ? HOUR))
+        OR
+        (t.priority = 'P2' AND t.created_at > DATE_SUB(NOW(), INTERVAL ? HOUR))
+        OR
+        (t.priority = 'P3' AND t.created_at > DATE_SUB(NOW(), INTERVAL ? HOUR))
+      )
+    )
+  `);
+
+    params.push(
+      config.slaTargets.P1,
+      config.slaTargets.P2,
+      config.slaTargets.P3
+    );
   }
 
   const whereSql = where.join(' AND ');
@@ -66,7 +149,12 @@ export async function listTickets({ orgId, page = 1, search = '', status, priori
     params
   );
 
-  return { rows, total, page, pageSize: PAGE_SIZE };
+  return {
+    rows: addSlaFieldsToTickets(rows),
+    total,
+    page,
+    pageSize: PAGE_SIZE,
+  };
 }
 
 export async function getTicketById(id) {
@@ -78,7 +166,7 @@ export async function getTicketById(id) {
       WHERE t.id = ?`,
     [id]
   );
-  return rows[0] || null;
+  return rows[0] ? addSlaFields(rows[0]) : null;
 }
 
 export async function listComments(ticketId) {
