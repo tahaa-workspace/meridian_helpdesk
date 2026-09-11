@@ -112,7 +112,7 @@ Run the submitted password through `bcrypt.hash()` before updating the `password
 
 **Severity:** Medium
 **File:** `server/src/services/ticketService.js`
-**Status:** Planned for fix
+**Status:** Fixed
 
 ### What is wrong
 
@@ -200,8 +200,8 @@ The five findings selected for implementation are:
 
 1. Users can open tickets from another organisation — Fixed
 2. Non-admin users can delete tickets — Fixed
-3. Requesters can claim tickets — Pending
-4. Page 1 skips the first 20 tickets — Pending
+3. Requesters can claim tickets — Fixed
+4. Page 1 skips the first 20 tickets — Fixed
 5. Logged-in users can still access the login page — Pending
 
 The following findings are documented but will remain unchanged:

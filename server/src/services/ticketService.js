@@ -26,7 +26,7 @@ export async function listTickets({ orgId, page = 1, search = '', status, priori
   }
 
   const whereSql = where.join(' AND ');
-  const offset = page * PAGE_SIZE;
+  const offset = (page - 1) * PAGE_SIZE; //First page of tickets skips the first 20 records
 
   const rows = await query(
     `SELECT t.id, t.subject, t.status, t.priority, t.created_at, t.updated_at,
@@ -39,6 +39,21 @@ export async function listTickets({ orgId, page = 1, search = '', status, priori
       LIMIT ? OFFSET ?`,
     [...params, PAGE_SIZE, offset]
   );
+
+  // const debugRows = await query(
+  //   `SELECT t.id, t.subject, t.status, t.priority, t.created_at, t.updated_at,
+  //           t.assignee_id, u.name AS assignee_name, r.name AS requester_name
+  //      FROM tickets t
+  //      LEFT JOIN users u ON u.id = t.assignee_id
+  //      JOIN users r ON r.id = t.requester_id
+  //     WHERE ${whereSql}
+  //     ORDER BY t.${sortBy} ${order}
+  //     LIMIT 20 OFFSET 0`,
+  //   [...params, PAGE_SIZE, offset]
+  // );
+
+  // console.log('EXPECTED FIRST 20 IDs:', debugRows.map(t => t.id));
+  // console.log('Returned ticket IDs(wrong): ', rows.map(ticket => ticket.id));
 
   // Attach the comment count each row needs for the list badge.
   for (const row of rows) {
