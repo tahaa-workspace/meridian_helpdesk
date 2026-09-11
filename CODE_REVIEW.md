@@ -4,9 +4,9 @@
 
 I reviewed the Meridian Helpdesk starter application with focus on organisation access, user roles, authentication, pagination, ticket filtering, and navigation.
 
-I identified seven findings. They are ranked mainly by their impact on application security, data access, and normal user functionality.
+I identified seven findings and ranked them based on their impact on security, data access, and normal application functionality.
 
-Five findings are being selected for implementation. The remaining findings are documented but left unchanged.
+Five findings were selected, implemented, and tested. The remaining two findings are documented but were left unchanged.
 
 ---
 
@@ -14,27 +14,22 @@ Five findings are being selected for implementation. The remaining findings are 
 
 **Severity:** High
 **Files:** `server/src/routes/tickets.js`, `server/src/services/ticketService.js`
+**Lines:** (33-35)
 **Status:** Fixed
 
 ### What is wrong
 
-The ticket detail API looks up a ticket using only its ticket ID. It does not verify that the ticket belongs to the same organisation as the logged-in user.
+The ticket detail API looked up a ticket using only its ticket ID. It did not verify that the ticket belonged to the same organisation as the logged-in user.
 
 ### Why it matters
 
 Northwind Trading and Cobalt Logistics are separate customers. A user from one organisation should not be able to access ticket details or comments belonging to another organisation.
 
-### Fix
+### Fix 
 
 The ticket detail route now checks the ticket's `org_id` against the logged-in user's `orgId`.
 
 If the ticket does not exist or belongs to another organisation, the API returns `404`.
-
-### Verification
-
-I tested this using accounts from both organisations.
-
-A user can still open a ticket belonging to their own organisation, but attempting to manually open a ticket ID belonging to the other organisation is now rejected.
 
 ---
 
@@ -42,19 +37,22 @@ A user can still open a ticket belonging to their own organisation, but attempti
 
 **Severity:** High
 **File:** `server/src/routes/tickets.js`
+**Lines:** (Lines 75-76)
 **Status:** Fixed
 
 ### What is wrong
 
-The delete-ticket endpoint checks whether the user is logged in, but it does not check whether the user has the `admin` role.
+The delete-ticket endpoint checked whether the user was logged in, but it did not check whether the user had the `admin` role.
 
 ### Why it matters
 
-According to the application role rules, deleting tickets is an admin-only operation. Without a backend role check, other authenticated users may be able to delete ticket data.
+According to the application role rules, deleting tickets is an admin-only operation.
 
-### Suggested fix
+Without a backend role check, another authenticated user could manually call the delete API even if the frontend did not display a Delete button.
 
-Use the existing role-checking middleware on the delete route and restrict the endpoint to the `admin` role.
+### Fix 
+
+The existing role-checking middleware is now used on the delete route so that only users with the `admin` role can delete tickets.
 
 ---
 
@@ -62,29 +60,104 @@ Use the existing role-checking middleware on the delete route and restrict the e
 
 **Severity:** High
 **Files:** `server/src/routes/tickets.js`, `client/src/features/tickets/TicketDetail.jsx`
+**Lines:**  (ticket.js - Lines 62-64) and (TicketDetail.jsx - Lines 56)
 **Status:** Fixed
 
 ### What is wrong
 
-The claim-ticket endpoint only checks that the user is authenticated. It does not restrict the operation to agents or admins.
+The claim-ticket endpoint only checked that the user was authenticated. It did not restrict the operation to agents or admins.
 
-The frontend also displays the **Claim this ticket** button without checking the user's role.
+The frontend also displayed the **Claim this ticket** button without checking the logged-in user's role.
 
 ### Why it matters
 
 The application rules state that agents can claim tickets. A requester should not be able to assign a support ticket to themselves.
 
-### Suggested fix
+### Fix
 
-Restrict the backend claim endpoint to the `agent` and `admin` roles.
+The backend claim endpoint is now restricted to `agent` and `admin` roles.
 
-The frontend should also show the Claim button only when the logged-in user has one of those roles.
+The frontend also displays the Claim button only to agents and admins.
 
-The backend check remains the actual security control.
+The backend role check remains the actual security control.
 
 ---
 
-## 4. Password is stored without hashing in invite acceptance
+## 4. Page 1 skips the first 20 tickets
+
+**Severity:** Medium
+**File:** `server/src/services/ticketService.js`
+**Lines:** 29
+**Status:** Fixed
+
+### What is wrong
+
+The pagination offset was calculated as:
+
+`page * PAGE_SIZE`
+
+With a page size of 20, requesting page 1 produced:
+
+`1 * 20 = OFFSET 20`
+
+However, page 1 should start from offset 0.
+
+### Why it matters
+
+The first 20 tickets in the ordered result were skipped instead of being displayed on the first page.
+
+While investigating this issue, I logged the requested page, page size, calculated offset, and returned ticket IDs. I also compared the result with the same query starting from `OFFSET 0`.
+
+### Fix
+
+The offset calculation was changed to:
+
+`(page - 1) * PAGE_SIZE`
+
+This results in:
+
+* Page 1 → offset 0
+* Page 2 → offset 20
+* Page 3 → offset 40
+
+---
+
+## 5. Search and filters do not refresh the ticket list
+
+**Severity:** Medium
+**File:** `client/src/features/tickets/TicketList.jsx`
+**Lines:** 31
+**Status:** Fixed
+
+### What is wrong
+
+The ticket-fetching `useEffect` used values such as:
+
+* `page`
+* `search`
+* `status`
+* `priority`
+* `sortBy`
+
+However, its dependency array contained only:
+
+`[page]`
+
+Because of this, changing search, status, priority, or sorting did not trigger the ticket API request again.
+
+### Why it matters
+
+A user could change a search or filter control, but the displayed ticket list would not immediately update using the selected value.
+
+### Fix
+
+The relevant search, filter, sorting, and pagination values were added to the `useEffect` dependency array.
+
+The ticket list now fetches updated results when those values change.
+
+---
+
+## 6. Password is stored without hashing in invite acceptance
 
 **Severity:** High
 **File:** `server/src/routes/auth.js`
@@ -98,115 +171,57 @@ The normal login flow uses `bcrypt.compare()`, which expects the stored value to
 
 ### Why it matters
 
-The user's original password may be stored directly in the database instead of a one-way hash.
+The user's original password may be stored directly in the database instead of as a one-way hash.
 
-It can also create inconsistent authentication behaviour because the login flow expects a bcrypt-formatted hash.
-
-### Suggested fix
-
-Run the submitted password through `bcrypt.hash()` before updating the `password_hash` column.
-
----
-
-## 5. Page 1 skips the first 20 tickets
-
-**Severity:** Medium
-**File:** `server/src/services/ticketService.js`
-**Status:** Fixed
-
-### What is wrong
-
-The pagination offset is calculated as:
-
-`page * PAGE_SIZE`
-
-With a page size of 20, requesting page 1 produces:
-
-`1 * 20 = OFFSET 20`
-
-Page 1 should start from offset 0.
-
-### Why it matters
-
-The first 20 tickets in the ordered result are skipped instead of being displayed on the first page.
-
-I verified this by logging the requested page, page size, calculated offset, and returned ticket IDs. I also compared the result against the same query using `OFFSET 0`.
+It can also create inconsistent authentication behaviour because the normal login flow expects a bcrypt-formatted password hash.
 
 ### Suggested fix
 
-Calculate the offset as:
+Hash the submitted password using `bcrypt.hash()` before updating the `password_hash` column.
 
-`(page - 1) * PAGE_SIZE`
+### Selection note
 
-This produces:
+I identified this issue during code review but did not include it in the five implemented fixes. I focused the selected fixes on issues that I reproduced directly through the current seeded application flows.
 
-* Page 1 → offset 0
-* Page 2 → offset 20
-* Page 3 → offset 40
-
----
-
-## 6. Search and filters do not refresh the ticket list
-
-**Severity:** Medium
-**File:** `client/src/features/tickets/TicketList.jsx`
-**Status:** Fixed
-
-### What is wrong
-
-The ticket-fetching `useEffect` uses values such as `search`, `status`, `priority`, `sortBy`, and `page`.
-
-However, its dependency array only contains:
-
-`[page]`
-
-Therefore changing search, status, priority, or sorting does not cause the effect to run again.
-
-### Why it matters
-
-The user can change a search or filter control, but the displayed ticket list does not immediately reload using the new value.
-
-### Suggested fix
-
-Include the relevant filter values in the `useEffect` dependency array so that the ticket list is fetched again when they change.
+This authentication issue should be addressed in a follow-up security pass.
 
 ---
 
 ## 7. Logged-in users can still access the login page
 
 **Severity:** Low
-**Files:** Client authentication/routing code
-**Status:** Not Selected for fix
+**Files:** `client/src/main.jsx`, `client/src/features/auth/Login.jsx`
+**Status:** Not selected for fix
 
 ### What is wrong
 
-After successfully signing in, pressing the browser Back button can return the user to the login page even though their authenticated session is still active.
+After successfully signing in, pressing the browser Back button can return the user to the login page even though the authenticated session is still active.
 
 ### Why it matters
 
-The user is already authenticated, so displaying the login screen again is confusing and creates inconsistent navigation behaviour.
+The user is already authenticated, so displaying the login screen again creates confusing and inconsistent navigation behaviour.
 
-This does not bypass authentication because the session still exists, so its impact is lower than the other findings.
+This does not bypass authentication because the user's session still exists, so its impact is lower than the other findings.
 
 ### Suggested fix
 
-When the login page loads, check whether an authenticated user/token already exists. If the user is already signed in, redirect them back to the authenticated ticket area instead of displaying the login form.
+When the login page is opened, check whether an authenticated user or token already exists.
+
+If the user is already signed in, redirect them back to the authenticated ticket area instead of displaying the login form.
 
 ---
 
 # Selected Fixes
 
-The five findings selected for implementation are:
+The five findings implemented in Part 1 are:
 
-1. Users can open tickets from another organisation — Fixed
-2. Non-admin users can delete tickets — Fixed
-3. Requesters can claim tickets — Fixed
-4. Page 1 skips the first 20 tickets — Fixed
-5. Search and filters do not refresh the ticket list — Fixed
+1. Users can open tickets from another organisation — **Fixed**
+2. Non-admin users can delete tickets — **Fixed**
+3. Requesters can claim tickets — **Fixed**
+4. Page 1 skips the first 20 tickets — **Fixed**
+5. Search and filters do not refresh the ticket list — **Fixed**
 
-The following findings are documented but will remain unchanged:
+The following findings are documented but remain unchanged:
 
 * Password is stored without hashing in invite acceptance
-* Search and filters do not refresh the ticket list
-
-Exact line numbers will be added after implementation is complete because the source files may change during the fixes.
+* Logged-in users can still access the login page
