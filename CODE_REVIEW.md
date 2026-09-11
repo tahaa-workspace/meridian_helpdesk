@@ -42,7 +42,7 @@ A user can still open a ticket belonging to their own organisation, but attempti
 
 **Severity:** High
 **File:** `server/src/routes/tickets.js`
-**Status:** Planned for fix
+**Status:** Fixed
 
 ### What is wrong
 
@@ -198,11 +198,11 @@ When the login page loads, check whether an authenticated user/token already exi
 
 The five findings selected for implementation are:
 
-1. Users can open tickets from another organisation — **Fixed**
-2. Non-admin users can delete tickets — **Pending**
-3. Requesters can claim tickets — **Pending**
-4. Page 1 skips the first 20 tickets — **Pending**
-5. Logged-in users can still access the login page — **Pending**
+1. Users can open tickets from another organisation — Fixed
+2. Non-admin users can delete tickets — Fixed
+3. Requesters can claim tickets — Pending
+4. Page 1 skips the first 20 tickets — Pending
+5. Logged-in users can still access the login page — Pending
 
 The following findings are documented but will remain unchanged:
 

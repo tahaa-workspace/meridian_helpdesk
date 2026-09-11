@@ -60,7 +60,7 @@ router.post('/', requireAuth, async (req, res, next) => {
   }
 });
 
-router.patch('/:id/assign', requireAuth, async (req, res, next) => { //only the admin and the agent should be able to claim the ticker, currently anyone is able to claim the ticket
+router.patch('/:id/assign', requireAuth, async (req, res, next) => {
   try {
     const result = await assignTicket(Number(req.params.id), req.user.id);
     if (!result) return res.status(404).json({ error: 'Not found' });
@@ -73,7 +73,7 @@ router.patch('/:id/assign', requireAuth, async (req, res, next) => { //only the 
   }
 });
 
-router.delete('/:id', requireAuth, async (req, res, next) => { //no role check here. Only admins should be able to delete the ticket
+router.delete('/:id', requireAuth, async (req, res, next) => { //no role check here. Only admins should be able to delete the ticket. Someone could still manual
   try {
     const ticket = await getTicketById(Number(req.params.id));
     if (!ticket) return res.status(404).json({ error: 'Not found' });
