@@ -62,7 +62,7 @@ Use the existing role-checking middleware on the delete route and restrict the e
 
 **Severity:** High
 **Files:** `server/src/routes/tickets.js`, `client/src/features/tickets/TicketDetail.jsx`
-**Status:** Planned for fix
+**Status:** Fixed
 
 ### What is wrong
 

@@ -73,7 +73,7 @@ router.patch('/:id/assign', requireAuth, async (req, res, next) => {
   }
 });
 
-router.delete('/:id', requireAuth, async (req, res, next) => { //no role check here. Only admins should be able to delete the ticket. Someone could still manual
+router.delete('/:id', requireAuth, requireRole('agent', 'admin'), async (req, res, next) => {
   try {
     const ticket = await getTicketById(Number(req.params.id));
     if (!ticket) return res.status(404).json({ error: 'Not found' });
